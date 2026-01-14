@@ -395,9 +395,11 @@ class TTGammaProcessor(processor.ProcessorABC):
             elif shift_syst == "JERDown":
                 jets = corrected_jets.JER.down
             elif shift_syst == "JESUp":
-                jets = ...  #FIXME 4
+                #jets = ...  #FIXME 4
+                jets = corrected_jets.JES.up
             elif shift_syst == "JESDown":
-                jets = ...  #FIXME 4
+                #jets = ...  #FIXME 4
+                jets = corrected_jets.JES.down
             else:
                 # either nominal or some shift systematic unrelated to jets
                 jets = corrected_jets
@@ -567,8 +569,10 @@ class TTGammaProcessor(processor.ProcessorABC):
                 datasetFull = "TTGamma_SingleLept_2016"
     
             puWeight = puLookup[datasetFull](events.Pileup.nTrueInt)
-            puWeight_Up = ...  # solution to FIXME 4
-            puWeight_Down = ...  # solution to FIXME 4
+            #puWeight_Up = ...  # solution to FIXME 4
+            #puWeight_Down = ...  # solution to FIXME 4
+            puWeight_Up = puLookup_Up[datasetFull](events.Pileup.nTrueInt) 
+            puWeight_Down = puLookup_Down[datasetFull](events.Pileup.nTrueInt)
 
             # add the puWeight and it's uncertainties to the weights container
             weights.add(
@@ -641,8 +645,15 @@ class TTGammaProcessor(processor.ProcessorABC):
 
             eleSF = ak.prod((eleID * eleRECO), axis=-1)
             eleSF_up = ak.prod(((eleID + eleIDerr) * (eleRECO + eleRECOerr)), axis=-1)
-            eleSF_down = ...  # solution to FIXME 4
-            weights.add(...)  # solution to FIXME 4
+            #eleSF_down = ...  # solution to FIXME 4
+            #weights.add(...)  # solution to FIXME 4
+            eleSF_down = ak.prod(((eleID - eleIDerr) * (eleRECO - eleRECOerr)), axis=-1)
+            weights.add(
+                    "eleEffWeight",
+                    eleSF,
+                    eleSF_up,
+                    eleSF_down
+                    )
 
             muID = mu_id_sf(tightMuons.eta, tightMuons.pt)
             muIDerr = mu_id_err(tightMuons.eta, tightMuons.pt)
@@ -656,9 +667,14 @@ class TTGammaProcessor(processor.ProcessorABC):
                 (muID + muIDerr) * (muIso + muIsoerr) * (muTrig + muTrigerr), axis=-1
             )
             muSF_down = ak.prod(
-                ...
+                (muID - muIDerr) * (muIso - muIsoerr) * (muTrig - muTrigerr), axis=-1
             )  # solution to FIXME 4
-            weights.add(...)  # solution to FIXME 4
+            weights.add(
+                    "muEffWeight",
+                    muSF,
+                    muSF_up,
+                    muSF_down
+                    )  # solution to FIXME 4
 
             # This section sets up some of the weight shifts related to theory uncertainties
             # in some samples, generator systematics are not available, in those case the systematic weights of 1. are used
@@ -752,7 +768,17 @@ class TTGammaProcessor(processor.ProcessorABC):
                     "muEffWeightUp",
                     "muEffWeightDown",
                     "eleEffWeightUp",
-                    "",  # solution to FIXME 4
+                    "eleEffWeightDown",  # solution to FIXME 4
+                    "ISRWeightUp",
+                    "ISRWeightDown",
+                    "PDFWeightUp",
+                    "PDFWeightDown",
+                    "FSRWeightUp",
+                    "FSRWeightDown",                            #SHOULD THE START BE CAPITALIZED FOR FSR ISR PDF
+                    "puWeightUp",
+                    "puWeightDown",
+                    "btagWeightUp",
+                    "btagWeightDown",
                 ]
 
                 if "TTGamma" in dataset:
