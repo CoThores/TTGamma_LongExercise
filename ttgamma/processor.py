@@ -126,6 +126,7 @@ def selectElectrons(events):
         abs(events.Electron.eta) > 1.479
     ) & (abs(events.Electron.dz) < 0.2)
 
+    electrons = events.Electron
     electronSelectTight = ((electrons.pt > 35) & (abs(electrons.eta) < 2.1) & (electrons.cutBased >= 4) & elePassDXY & elePassDZ & eleEtaGap
     )  # FIXME 1a
 
@@ -402,6 +403,7 @@ class TTGammaProcessor(processor.ProcessorABC):
                 jets = corrected_jets.JER.down
             elif shift_syst == "JESUp":
                 #jets = ...  #FIXME 4
+                print(type(corrected_jets))
                 jets = corrected_jets.JES.up
             elif shift_syst == "JESDown":
                 #jets = ...  #FIXME 4
@@ -422,7 +424,7 @@ class TTGammaProcessor(processor.ProcessorABC):
         # (bit-wise selected from the jetID variable), and pass the cross-cleaning cuts defined above
         mediumJetIDbit = 0b10
 
-        tightJet = jets[(jets.pt >= 30) & (abs(jets.eta) < 2.4) & ((jets.JetId & mediumJetIDbit) == 2) & jetMuMask & jetEleMask & jetPhoMask
+        tightJet = jets[(jets.pt >= 30) & (abs(jets.eta) < 2.4) & ((jets.jetId & mediumJetIDbit) == 2) & jetMuMask & jetEleMask & jetPhoMask
         ]  # FIXME 1a
 
         # label the subset of tightJet which pass the Deep CSV tagger
@@ -492,7 +494,7 @@ class TTGammaProcessor(processor.ProcessorABC):
         )
         #   And another which selects events with at least 3 tightJet and exactly zero b-tagged jet
         selection.add(
-            "jetSel_3j1b",
+            "jetSel_3j0b",
             (ak.num(tightJet) >= 3) & (ak.sum(tightJet.btagged, axis=-1) == 0),
         )  # FIXME 1b
 
@@ -504,7 +506,7 @@ class TTGammaProcessor(processor.ProcessorABC):
 
         # add selection for events with exactly 1 tight photon
         selection.add(
-            "phoSel_1tight",
+            "onePho",
             (ak.num(tightPhotons) == 1),
         )  # FIXME 1b
 
@@ -703,19 +705,19 @@ class TTGammaProcessor(processor.ProcessorABC):
             # in some samples, generator systematics are not available, in those case the systematic weights of 1. are used
             if ak.mean(ak.num(events.PSWeight)) == 1:
                 weights.add(
-                    "ISR",
+                    "ISRWeight",
                     weight=np.ones(len(events)),
                     weightUp=np.ones(len(events)),
                     weightDown=np.ones(len(events)),
                 )
                 weights.add(
-                    "FSR",
+                    "FSRWeight",
                     weight=np.ones(len(events)),
                     weightUp=np.ones(len(events)),
                     weightDown=np.ones(len(events)),
                 )
                 weights.add(
-                    "PDF",
+                    "PDFWeight",
                     weight=np.ones(len(events)),
                     weightUp=np.ones(len(events)),
                     weightDown=np.ones(len(events)),
@@ -730,7 +732,7 @@ class TTGammaProcessor(processor.ProcessorABC):
                 )
                 LHEPdfVariation = events.LHEPdfWeight / LHEPdfWeight_0
                 weights.add(
-                    "PDF",
+                    "PDFWeight",
                     weight=np.ones(len(events)),
                     weightUp=ak.max(LHEPdfVariation, axis=1),
                     weightDown=ak.min(LHEPdfVariation, axis=1),
@@ -767,13 +769,13 @@ class TTGammaProcessor(processor.ProcessorABC):
                     psWeights = events.PSWeight
 
                 weights.add(
-                    "ISR",
+                    "ISRWeight",
                     weight=np.ones(len(events)),
                     weightUp=psWeights[:, 2],
                     weightDown=psWeights[:, 0],
                 )
                 weights.add(
-                    "FSR",
+                    "FSRWeight",
                     weight=np.ones(len(events)),
                     weightUp=psWeights[:, 3],
                     weightDown=psWeights[:, 1],
@@ -838,7 +840,7 @@ class TTGammaProcessor(processor.ProcessorABC):
 
                 # use the selection.all() method to select events passing
                 # the lepton selection, 4-jet 1-tag jet selection, and either the one-photon or loose-photon selections
-                phosel = selection.all(lepSel, "jetSel_4j1b", "phoSel_1tight",)
+                phosel = selection.all(lepSel, "jetSel_4j1b", "onePho",)
                 phoselLoose = selection.all(lepSel, "jetSel_4j1b", "phoSel_1loose")  # solution to FIXME 3 done
 
                 # fill photon_pt and photon_eta, using the leadingPhoton array, from events passing the phosel selection
@@ -865,7 +867,7 @@ class TTGammaProcessor(processor.ProcessorABC):
 
                 # fill M3 histogram, for events passing the phosel selection
                 output["M3"].fill(
-                    M3=leadingPhoton.M3[phosel],
+                    M3=ak.flatten(M3[phosel]),
                     category=phoCategory[phosel],
                     lepFlavor=lepton,
                     systematic=syst,
